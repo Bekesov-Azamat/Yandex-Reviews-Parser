@@ -1,0 +1,38 @@
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: yandex_reviews_app
+    working_dir: /var/www
+    volumes:
+      - ./backend:/var/www
+    ports:
+      - "8000:8000"
+    depends_on:
+      - pgsql
+
+  frontend:
+    image: node:22-alpine
+    container_name: yandex_reviews_frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+  pgsql:
+    image: postgres:16
+    container_name: yandex_reviews_pgsql
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: yandex_reviews
+      POSTGRES_USER: yandex_user
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - pgsql_data:/var/lib/postgresql/data
+
+volumes:
+  pgsql_data:
