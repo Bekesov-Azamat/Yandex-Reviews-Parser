@@ -6,23 +6,34 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreOrganizationRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, array<int, string>>
      */
     public function rules(): array
     {
         return [
-            //
+            'url' => [
+                'required',
+                'string',
+                'max:2000',
+                'url',
+                'regex:/^https?:\/\/(yandex\.[a-z.]+|maps\.yandex\.[a-z.]+|yandex\.kz|yandex\.ru)\/.+/i',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'url.regex' => 'The URL must be a valid Yandex Maps organization link.',
         ];
     }
 }

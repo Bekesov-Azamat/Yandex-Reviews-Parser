@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Enums\ParseStatus;
 
 class ParseAttempt extends Model
 {
@@ -20,8 +21,8 @@ class ParseAttempt extends Model
         'error_message',
         'meta',
     ];
-
     protected $casts = [
+        'status' => ParseStatus::class,
         'reviews_requested_limit' => 'integer',
         'reviews_collected' => 'integer',
         'started_at' => 'datetime',
