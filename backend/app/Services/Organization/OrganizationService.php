@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\YandexMaps\YandexMapsParserInterface;
 use Illuminate\Support\Facades\DB;
 use app\Services\Organization\OrganizationReadService;
+use App\Services\Organization\Exceptions\OrganizationParsingAlreadyRunningException;
 use Throwable;
 
 class OrganizationService
@@ -39,6 +40,9 @@ class OrganizationService
 
     public function parse(Organization $organization): Organization
     {
+        if ($organization->parse_status === ParseStatus::Processing) {
+            throw new OrganizationParsingAlreadyRunningException();
+        }
         $attempt = ParseAttempt::query()->create([
             'organization_id' => $organization->id,
             'status' => ParseStatus::Processing,

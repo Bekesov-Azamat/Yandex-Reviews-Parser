@@ -9,6 +9,9 @@ use App\Models\Organization;
 use App\Services\Organization\OrganizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\Organization\Exceptions\OrganizationParsingAlreadyRunningException;
+use App\Services\YandexMaps\Exceptions\YandexMapsParserException;
+use App\Support\Http\ApiError;
 use Throwable;
 
 class OrganizationController extends Controller
@@ -39,13 +42,31 @@ class OrganizationController extends Controller
             );
 
             return OrganizationResource::make($organization);
+        } catch (OrganizationParsingAlreadyRunningException $exception) {
+            return ApiError::response(
+                code: 'PARSING_ALREADY_RUNNING',
+                message: $exception->getMessage(),
+                status: 409,
+            );
+        } catch (YandexMapsParserException $exception) {
+            report($exception);
+
+            return ApiError::response(
+                code: $exception->errorCode(),
+                message: $exception->getMessage(),
+                status: 502,
+            );
         } catch (Throwable $exception) {
             report($exception);
 
-            return response()->json([
-                'message' => 'Failed to parse Yandex Maps organization.',
-                'error' => $exception->getMessage(),
-            ], 502);
+            return ApiError::response(
+                code: 'UNEXPECTED_PARSER_ERROR',
+                message: 'Unexpected parser error.',
+                status: 500,
+                meta: [
+                    'exception' => $exception::class,
+                ],
+            );
         }
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Organization;
 
+use App\Rules\YandexMapsOrganizationUrl;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreOrganizationRequest extends FormRequest
@@ -12,7 +13,7 @@ class StoreOrganizationRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, string>>
+     * @return array<string, array<int, mixed>>
      */
     public function rules(): array
     {
@@ -22,18 +23,8 @@ class StoreOrganizationRequest extends FormRequest
                 'string',
                 'max:2000',
                 'url',
-                'regex:/^https?:\/\/(yandex\.[a-z.]+|maps\.yandex\.[a-z.]+|yandex\.kz|yandex\.ru)\/.+/i',
+                new YandexMapsOrganizationUrl(),
             ],
-        ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function messages(): array
-    {
-        return [
-            'url.regex' => 'The URL must be a valid Yandex Maps organization link.',
         ];
     }
 }
