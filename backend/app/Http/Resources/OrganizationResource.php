@@ -16,6 +16,11 @@ class OrganizationResource extends JsonResource
             'rating' => $this->rating !== null ? (float) $this->rating : null,
             'ratings_count' => $this->ratings_count,
             'reviews_count' => $this->reviews_count,
+            'saved_reviews_count' => $this->whenLoaded(
+                'reviews',
+                fn() => $this->reviews->count(),
+                $this->reviews()->count()
+            ),
             'parse_status' => $this->parse_status?->value,
             'parse_error' => $this->parse_error,
             'last_parsed_at' => $this->last_parsed_at?->toISOString(),

@@ -212,17 +212,11 @@ onMounted(() => {
                 </div>
 
                 <div v-else class="organization-history-list">
-                    <button
-                        v-for="item in organizations"
-                        :key="item.id"
-                        type="button"
-                        :class="[
-                            'attempt-item',
-                            'organization-history-item',
-                            { active: item.id === selectedOrganizationId }
-                        ]"
-                        @click="selectOrganization(item.id, 1)"
-                    >
+                    <button v-for="item in organizations" :key="item.id" type="button" :class="[
+                        'attempt-item',
+                        'organization-history-item',
+                        { active: item.id === selectedOrganizationId }
+                    ]" @click="selectOrganization(item.id, 1)">
                         <div>
                             <strong>{{ item.name || 'Без названия' }}</strong>
                             <small>{{ item.reviews_count }} отзывов</small>
@@ -269,7 +263,8 @@ onMounted(() => {
                         {{ organization?.reviews_count ?? 0 }}
                     </strong>
                     <p>
-                        Доступно в Яндексе: {{ organization?.reviews_count ?? 0 }}
+                        Загружено {{ organization?.saved_reviews_count ?? 0 }}
+                        из {{ organization?.reviews_count ?? 0 }}
                     </p>
                 </article>
             </section>
