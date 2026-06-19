@@ -24,7 +24,7 @@ class User extends Authenticatable
         'password',
     ];
 
-    public function organiztions(): HasMany
+    public function organizations(): HasMany
     {
         return $this->hasMany(Organization::class);
     }

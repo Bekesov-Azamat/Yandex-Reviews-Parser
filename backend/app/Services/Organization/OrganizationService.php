@@ -7,10 +7,11 @@ use App\Models\Organization;
 use App\Models\ParseAttempt;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\Organization\Exceptions\OrganizationParsingAlreadyRunningException;
 use App\Services\YandexMaps\YandexMapsParserInterface;
 use Illuminate\Support\Facades\DB;
-use app\Services\Organization\OrganizationReadService;
-use App\Services\Organization\Exceptions\OrganizationParsingAlreadyRunningException;
+use Illuminate\Support\Facades\Log;
+use App\Services\Organization\OrganizationReadService;
 use Throwable;
 
 class OrganizationService
@@ -24,14 +25,22 @@ class OrganizationService
 
     public function saveAndParse(User $user, string $url): Organization
     {
-        $organization = Organization::query()->updateOrCreate(
-            ['user_id' => $user->id],
+
+        $organization = Organization::query()->firstOrCreate(
             [
+                'user_id' => $user->id,
                 'yandex_url' => $url,
+            ],
+            [
                 'parse_status' => ParseStatus::Pending,
                 'parse_error' => null,
             ]
         );
+
+        $organization->update([
+            'parse_status' => ParseStatus::Pending,
+            'parse_error' => null,
+        ]);
 
         $this->readService->forgetForUser($user);
 
@@ -43,6 +52,9 @@ class OrganizationService
         if ($organization->parse_status === ParseStatus::Processing) {
             throw new OrganizationParsingAlreadyRunningException();
         }
+
+        $startedAt = microtime(true);
+
         $attempt = ParseAttempt::query()->create([
             'organization_id' => $organization->id,
             'status' => ParseStatus::Processing,
@@ -61,8 +73,9 @@ class OrganizationService
 
         try {
             $parsed = $this->parser->parse($organization->yandex_url, self::REVIEWS_LIMIT);
+            $durationSeconds = round(microtime(true) - $startedAt, 3);
 
-            DB::transaction(function () use ($organization, $attempt, $parsed): void {
+            DB::transaction(function () use ($organization, $attempt, $parsed, $durationSeconds): void {
                 $finalStatus = $parsed->isPartial
                     ? ParseStatus::Partial
                     : ParseStatus::Success;
@@ -76,6 +89,9 @@ class OrganizationService
                     'parse_error' => $parsed->warning,
                     'last_parsed_at' => now(),
                 ]);
+                Review::query()
+                    ->where('organization_id', $organization->id)
+                    ->delete();
 
                 foreach ($parsed->reviews as $reviewData) {
                     $externalId = $reviewData->externalId ?: $this->makeReviewHash($reviewData);
@@ -103,13 +119,19 @@ class OrganizationService
                         'parser' => $this->parser::class,
                         'cache_used' => false,
                         'is_partial' => $parsed->isPartial,
+                        'reviews_in_response' => count($parsed->reviews),
+                        'duration_seconds' => $durationSeconds,
                     ],
                 ]);
             });
 
+            $this->readService->forgetForUser($organization->user);
+
             return $organization->refresh();
         } catch (Throwable $exception) {
-            $this->markAsFailed($organization, $attempt, $exception);
+            $durationSeconds = round(microtime(true) - $startedAt, 3);
+
+            $this->markAsFailed($organization, $attempt, $exception, $durationSeconds);
 
             throw $exception;
         }
@@ -119,7 +141,15 @@ class OrganizationService
         Organization $organization,
         ParseAttempt $attempt,
         Throwable $exception,
+        float $durationSeconds,
     ): void {
+        Log::error('Organization parsing failed', [
+            'organization_id' => $organization->id,
+            'exception' => $exception::class,
+            'message' => $exception->getMessage(),
+            'duration_seconds' => $durationSeconds,
+        ]);
+
         $organization->update([
             'parse_status' => ParseStatus::Failed,
             'parse_error' => $exception->getMessage(),
@@ -132,8 +162,21 @@ class OrganizationService
             'meta' => [
                 'parser' => $this->parser::class,
                 'exception_class' => $exception::class,
+                'duration_seconds' => $durationSeconds,
             ],
         ]);
+    }
+    private function extractBusinessId(string $url): string
+    {
+        if (preg_match('~/org/[^/]+/(\d+)~', $url, $matches)) {
+            return $matches[1];
+        }
+
+        if (preg_match('~oid=(\d+)~', $url, $matches)) {
+            return $matches[1];
+        }
+
+        return hash('sha256', $url);
     }
 
     private function makeReviewHash(object $reviewData): string

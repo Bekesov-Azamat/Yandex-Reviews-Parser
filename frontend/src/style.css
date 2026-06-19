@@ -710,3 +710,42 @@ button {
     width: 100%;
   }
 }
+
+.organization-history-item {
+  width: 100%;
+  border: 1px solid transparent;
+  text-align: left;
+  background: #f9fafb;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.organization-history-item:hover {
+  border-color: rgba(250, 204, 21, 0.9);
+  background: #fffbea;
+  transform: translateY(-1px);
+}
+
+.organization-history-item.active {
+  border-color: #facc15;
+  background: #fef3c7;
+}
+
+.organization-history-item strong,
+.organization-history-item small {
+  display: block;
+}
+
+.organization-history-panel {
+  max-width: 1180px;
+  margin: 0 auto 24px;
+}
+
+.organization-history-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.organization-history-item {
+  min-height: 76px;
+}

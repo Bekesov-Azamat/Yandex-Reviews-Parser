@@ -4,6 +4,10 @@ import { useRouter } from 'vue-router'
 import {
     getHealth,
     getOrganization,
+    getOrganizationById,
+    getOrganizations,
+    getOrganizationParseAttempts,
+    getOrganizationReviews,
     getParseAttempts,
     getReviews,
     logout,
@@ -11,6 +15,8 @@ import {
 } from '../services/api'
 
 const organization = ref(null)
+const organizations = ref([])
+const selectedOrganizationId = ref(null)
 const reviews = ref([])
 const attempts = ref([])
 const health = ref(null)
@@ -62,16 +68,24 @@ async function loadDashboard(page = 1) {
     isLoading.value = true
 
     try {
-        const [healthResponse, organizationResponse, reviewsResponse, attemptsResponse] =
-            await Promise.all([
-                getHealth(),
-                getOrganization(),
-                getReviews(page),
-                getParseAttempts(),
-            ])
+        const [
+            healthResponse,
+            organizationsResponse,
+            organizationResponse,
+            reviewsResponse,
+            attemptsResponse,
+        ] = await Promise.all([
+            getHealth(),
+            getOrganizations(),
+            getOrganization(),
+            getReviews(page),
+            getParseAttempts(),
+        ])
 
         health.value = healthResponse
         organization.value = organizationResponse.data
+        organizations.value = organizationsResponse.data
+        selectedOrganizationId.value = organizationResponse.data?.id ?? null
         reviews.value = reviewsResponse.data
         meta.value = reviewsResponse.meta
         attempts.value = attemptsResponse.data
@@ -91,6 +105,7 @@ async function submitOrganization() {
     try {
         const response = await saveOrganizationUrl(url.value)
         organization.value = response.data
+        selectedOrganizationId.value = response.data.id
         successMessage.value = 'Организация успешно обновлена'
 
         await loadDashboard(1)
@@ -98,6 +113,29 @@ async function submitOrganization() {
         errorMessage.value = error.message || 'Не удалось сохранить ссылку'
     } finally {
         isParsing.value = false
+    }
+}
+async function selectOrganization(id, page = 1) {
+    errorMessage.value = ''
+    isLoading.value = true
+    selectedOrganizationId.value = id
+
+    try {
+        const [organizationResponse, reviewsResponse, attemptsResponse] = await Promise.all([
+            getOrganizationById(id),
+            getOrganizationReviews(id, page),
+            getOrganizationParseAttempts(id),
+        ])
+
+        organization.value = organizationResponse.data
+        reviews.value = reviewsResponse.data
+        meta.value = reviewsResponse.meta
+        attempts.value = attemptsResponse.data
+        currentPage.value = page
+    } catch (error) {
+        errorMessage.value = error.message || 'Не удалось загрузить организацию'
+    } finally {
+        isLoading.value = false
     }
 }
 
@@ -163,6 +201,35 @@ onMounted(() => {
         </section>
 
         <template v-else>
+            <section class="panel organization-history-panel">
+                <div class="panel-header">
+                    <h2>История организаций</h2>
+                    <span>{{ organizations.length }}</span>
+                </div>
+
+                <div v-if="organizations.length === 0" class="empty-state">
+                    Организации пока отсутствуют.
+                </div>
+
+                <div v-else class="organization-history-list">
+                    <button
+                        v-for="item in organizations"
+                        :key="item.id"
+                        type="button"
+                        :class="[
+                            'attempt-item',
+                            'organization-history-item',
+                            { active: item.id === selectedOrganizationId }
+                        ]"
+                        @click="selectOrganization(item.id, 1)"
+                    >
+                        <div>
+                            <strong>{{ item.name || 'Без названия' }}</strong>
+                            <small>{{ item.reviews_count }} отзывов</small>
+                        </div>
+                    </button>
+                </div>
+            </section>
             <section class="stats-grid">
                 <article class="stat-card organization-card">
                     <span class="stat-label">Организация</span>
@@ -201,7 +268,9 @@ onMounted(() => {
                     <strong class="big-number">
                         {{ organization?.reviews_count ?? 0 }}
                     </strong>
-                    <p>Сохранено в базе</p>
+                    <p>
+                        Доступно в Яндексе: {{ organization?.reviews_count ?? 0 }}
+                    </p>
                 </article>
             </section>
 
@@ -262,16 +331,22 @@ onMounted(() => {
                     </div>
 
                     <div v-if="meta && meta.last_page > 1" class="pagination">
-                        <button :disabled="currentPage <= 1" @click="loadDashboard(currentPage - 1)">
+                        <button :disabled="currentPage <= 1" @click="selectedOrganizationId
+                            ? selectOrganization(selectedOrganizationId, currentPage - 1)
+                            : loadDashboard(currentPage - 1)">
                             Назад
                         </button>
 
                         <button v-for="page in meta.last_page" :key="page" :class="{ active: page === currentPage }"
-                            @click="loadDashboard(page)">
+                            @click="selectedOrganizationId
+                                ? selectOrganization(selectedOrganizationId, page)
+                                : loadDashboard(page)">
                             {{ page }}
                         </button>
 
-                        <button :disabled="currentPage >= meta.last_page" @click="loadDashboard(currentPage + 1)">
+                        <button :disabled="currentPage >= meta.last_page" @click="selectedOrganizationId
+                            ? selectOrganization(selectedOrganizationId, currentPage + 1)
+                            : loadDashboard(currentPage + 1)">
                             Вперёд
                         </button>
                     </div>

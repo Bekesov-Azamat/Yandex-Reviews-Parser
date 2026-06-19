@@ -30,6 +30,27 @@ class OrganizationController extends Controller
 
         return OrganizationResource::make($organization);
     }
+    public function index(Request $request): JsonResponse
+    {
+        $organizations = Organization::query()
+            ->where('user_id', $request->user()->id)
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'data' => OrganizationResource::collection($organizations),
+        ]);
+    }
+    public function showById(Request $request, Organization $organization): OrganizationResource|JsonResponse
+    {
+        if ($organization->user_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Organization not found.',
+            ], 404);
+        }
+
+        return OrganizationResource::make($organization);
+    }
 
     public function store(
         StoreOrganizationRequest $request,

@@ -4,10 +4,11 @@ namespace App\Services\YandexMaps\Exceptions;
 
 class YandexMapsUnavailableException extends YandexMapsParserException
 {
-    public function __construct()
-    {
+    public function __construct(
+        string $message = 'Yandex Maps source is temporarily unavailable.'
+    ) {
         parent::__construct(
-            message: 'Yandex Maps source is temporarily unavailable.',
+            message: $message,
             errorCode: 'YANDEX_MAPS_UNAVAILABLE',
         );
     }

@@ -94,3 +94,17 @@ export async function getParseAttempts() {
 export async function getHealth() {
     return request('/api/health')
 }
+export async function getOrganizations() {
+    return request('/api/organizations')
+}
+export async function getOrganizationById(id) {
+    return request(`/api/organizations/${id}`)
+}
+
+export async function getOrganizationReviews(id, page = 1) {
+    return request(`/api/organizations/${id}/reviews?page=${page}`)
+}
+
+export async function getOrganizationParseAttempts(id) {
+    return request(`/api/organizations/${id}/parse-attempts`)
+}

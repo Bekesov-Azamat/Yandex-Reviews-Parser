@@ -28,4 +28,22 @@ class ReviewController extends Controller
             'meta' => ApiPagination::meta($reviews),
         ]);
     }
+    public function indexByOrganization(Request $request, Organization $organization): JsonResponse
+    {
+        if ($organization->user_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Organization not found.',
+            ], 404);
+        }
+
+        $reviews = Review::query()
+            ->where('organization_id', $organization->id)
+            ->latest('reviewed_at')
+            ->paginate(50);
+
+        return response()->json([
+            'data' => ReviewResource::collection($reviews)->resolve(),
+            'meta' => ApiPagination::meta($reviews),
+        ]);
+    }
 }

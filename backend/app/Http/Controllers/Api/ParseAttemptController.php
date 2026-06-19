@@ -22,4 +22,17 @@ class ParseAttemptController extends Controller
 
         return ParseAttemptResource::collection($attempts);
     }
+    public function indexByOrganization(Request $request, Organization $organization): AnonymousResourceCollection
+    {
+        if ($organization->user_id !== $request->user()->id) {
+            abort(404);
+        }
+
+        $attempts = $organization->parseAttempts()
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        return ParseAttemptResource::collection($attempts);
+    }
 }
